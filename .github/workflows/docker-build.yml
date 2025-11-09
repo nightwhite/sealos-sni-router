@@ -50,6 +50,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},suffix=-amd64
             type=semver,pattern={{major}},suffix=-amd64
             type=sha,suffix=-amd64
+            type=raw,value=latest-amd64,enable={{is_default_branch}}
 
       - name: Build and push Docker image (amd64)
         uses: docker/build-push-action@v5
@@ -95,6 +96,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},suffix=-arm64
             type=semver,pattern={{major}},suffix=-arm64
             type=sha,suffix=-arm64
+            type=raw,value=latest-arm64,enable={{is_default_branch}}
 
       - name: Build and push Docker image (arm64)
         uses: docker/build-push-action@v5
