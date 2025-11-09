@@ -9,6 +9,8 @@ type DbType = ReturnType<typeof drizzlePg> | ReturnType<typeof drizzleSqlite>;
 
 let db: DbType | null = null;
 let dbType: 'sqlite' | 'postgresql' | null = null;
+let sqliteClient: Database | null = null;
+let pgPool: Pool | null = null;
 
 export async function initializeDatabase() {
   const dbUrl = config.DATABASE_URL;
@@ -22,14 +24,14 @@ export async function initializeDatabase() {
     if (dbUrl.startsWith('sqlite://')) {
       // SQLite - 使用 Bun 原生 SQLite
       const filePath = dbUrl.replace('sqlite://', '');
-      const sqlite = new Database(filePath);
-      db = drizzleSqlite(sqlite, { schema });
+      sqliteClient = new Database(filePath);
+      db = drizzleSqlite(sqliteClient, { schema });
       dbType = 'sqlite';
       console.log(`✅ SQLite 数据库已连接: ${filePath}`);
     } else if (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')) {
       // PostgreSQL
-      const pool = new Pool({ connectionString: dbUrl });
-      db = drizzlePg(pool, { schema });
+      pgPool = new Pool({ connectionString: dbUrl });
+      db = drizzlePg(pgPool, { schema });
       dbType = 'postgresql';
       console.log(`✅ PostgreSQL 数据库已连接`);
     } else {
@@ -50,10 +52,9 @@ async function createTables() {
   if (!db) return;
 
   try {
-    if (dbType === 'sqlite') {
+    if (dbType === 'sqlite' && sqliteClient) {
       // SQLite 自动创建表
-      const sqlite = (db as any)._.client;
-      sqlite.exec(`
+      sqliteClient.run(`
         CREATE TABLE IF NOT EXISTS services (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           domain TEXT NOT NULL UNIQUE,
@@ -64,10 +65,9 @@ async function createTables() {
         )
       `);
       console.log('✅ SQLite 表已创建');
-    } else if (dbType === 'postgresql') {
+    } else if (dbType === 'postgresql' && pgPool) {
       // PostgreSQL 创建表
-      const pool = (db as any)._.client;
-      await pool.query(`
+      await pgPool.query(`
         CREATE TABLE IF NOT EXISTS services (
           id SERIAL PRIMARY KEY,
           domain TEXT NOT NULL UNIQUE,
