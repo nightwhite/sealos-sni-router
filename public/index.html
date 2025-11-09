@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bun SNI 路由器管理</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Bun SNI 路由器管理</h1>
+            <p class="subtitle">高性能 SNI 路由，无需 HAProxy</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="services">服务管理</button>
+            <button class="tab-btn" data-tab="stats">统计信息</button>
+        </div>
+
+        <!-- 服务管理标签页 -->
+        <div id="services" class="tab-content active">
+            <div class="card">
+                <h2>添加新服务</h2>
+                <form id="addServiceForm">
+                    <div class="form-group">
+                        <label for="domain">域名</label>
+                        <input type="text" id="domain" placeholder="例: smtp.example.com 或 *.example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="service">后端服务</label>
+                        <input type="text" id="service" placeholder="例: email-service" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="port">端口</label>
+                        <input type="number" id="port" placeholder="例: 8025" min="1" max="65535" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">添加服务</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>服务列表</h2>
+                <div id="servicesList" class="services-list">
+                    <p class="empty">加载中...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计信息标签页 -->
+        <div id="stats" class="tab-content">
+            <div id="statsContent">
+                <p class="empty">加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="/app.js"></script>
+</body>
+</html>
+

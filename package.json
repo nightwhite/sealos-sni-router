@@ -1,0 +1,31 @@
+{
+  "name": "sealos-sni-router",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "NODE_ENV=production bun run ./src/index.ts",
+    "build": "bun build src/index.ts --compile --minify --sourcemap --outfile=dist/server",
+    "generate": "bun x drizzle-kit generate",
+    "push": "bun x drizzle-kit push",
+    "migrate": "bun x drizzle-kit migrate",
+    "studio": "bun x drizzle-kit studio"
+  },
+  "dependencies": {
+    "@bogeychan/elysia-logger": "^0.1.10",
+    "@elysiajs/html": "^1.3.1",
+    "@elysiajs/static": "^1.4.6",
+    "@kitajs/ts-html-plugin": "^4.1.2",
+    "drizzle-kit": "^0.31.4",
+    "drizzle-orm": "^0.44.5",
+    "elysia": "^1.3.21",
+    "elysia-autoload": "^1.7.0",
+    "env-var": "^7.5.0",
+    "ioredis": "^5.3.2",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.21",
+    "@types/pg": "^8.15.6",
+    "typescript": "^5.9.2"
+  }
+}
