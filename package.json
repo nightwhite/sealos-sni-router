@@ -4,7 +4,9 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "NODE_ENV=production bun run ./src/index.ts",
-    "build": "bun build src/index.ts --compile --minify --sourcemap --outfile=dist/server",
+    "build": "bun build --compile --target=bun ./src/index.ts --outfile server",
+    "build:linux-x64": "bun build --compile --target=bun-linux-x64 ./src/index.ts --outfile server",
+    "build:linux-arm64": "bun build --compile --target=bun-linux-arm64 ./src/index.ts --outfile server",
     "generate": "bun x drizzle-kit generate",
     "push": "bun x drizzle-kit push",
     "migrate": "bun x drizzle-kit migrate",

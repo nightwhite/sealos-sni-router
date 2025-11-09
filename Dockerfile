@@ -16,8 +16,13 @@ COPY src ./src
 COPY public ./public
 COPY tsconfig.json ./
 
-# 使用 bun run build 编译项目
-RUN bun run build
+# 根据目标架构编译项目
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+      bun build --compile --target=bun-linux-arm64 ./src/index.ts --outfile server; \
+    else \
+      bun build --compile --target=bun-linux-x64 ./src/index.ts --outfile server; \
+    fi
 
 # ============================================================================
 # 运行阶段
@@ -34,8 +39,8 @@ WORKDIR /app
 # 创建数据目录（用于 SQLite 持久化）
 RUN mkdir -p /data
 
-# 从构建阶段复制编译后的文件
-COPY --from=builder /app/dist ./dist
+# 从构建阶段复制编译后的可执行文件
+COPY --from=builder /app/server ./server
 COPY --from=builder /app/public ./public
 
 # 环境变量
@@ -50,5 +55,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/health || exit 1
 
 # 启动编译后的可执行文件
-CMD ["./dist/server"]
+CMD ["./server"]
 
