@@ -1,13 +1,13 @@
 import { config } from "./config.ts"
-import { app } from "./server.ts"
-import { startSNIRouter } from "./services/sni-router.ts"
 import { initializeDatabase } from "./db/index.ts"
+import { configManager } from "./services/config-manager.ts"
 
 const signals = ["SIGINT", "SIGTERM"];
 
 for (const signal of signals) {
     process.on(signal, async () => {
         console.log(`🛑 收到 ${signal} 信号，开始优雅关闭...`);
+        const { app } = await import("./server.ts");
         await app.stop()
         process.exit(0);
     })
@@ -24,8 +24,15 @@ process.on("unhandledRejection", (error) => {
 // 初始化数据库
 await initializeDatabase();
 
+// 刷新 ConfigManager 的数据库连接
+configManager.refreshDatabase();
+
+// 现在才导入 server 和 router
+const { app } = await import("./server.ts");
+const { startSNIRouter } = await import("./services/sni-router.ts");
+
 // 启动 Web API
-const server = app.listen(config.PORT, () => {
+app.listen(config.PORT, () => {
     console.log(`🌐 Sealos SNI Router Web Manager 启动在 http://0.0.0.0:${config.PORT}`);
     console.log(`📊 日志级别: ${config.NODE_ENV === "production" ? "error" : "info"}`);
 })

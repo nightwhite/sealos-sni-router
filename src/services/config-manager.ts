@@ -21,9 +21,16 @@ export class ConfigManager extends EventEmitter {
 
   constructor() {
     super();
+    // 延迟初始化，等待数据库连接
+    this.storageMode = 'sqlite-memory'; // 临时默认值
+    this.init();
+  }
+
+  // 刷新数据库连接（在数据库初始化后调用）
+  refreshDatabase() {
     this.db = getDatabase();
     this.storageMode = this.detectStorageMode();
-    this.init();
+    console.log(`🔄 ConfigManager 数据库连接已刷新 (模式: ${this.storageMode})`);
   }
 
   private detectStorageMode(): StorageMode {
