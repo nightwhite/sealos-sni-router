@@ -6,7 +6,7 @@ FROM oven/bun:1-alpine AS builder
 WORKDIR /app
 
 # 复制依赖文件
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock* ./
 
 # 安装所有依赖（包括 devDependencies）
 RUN bun install --frozen-lockfile
@@ -16,12 +16,8 @@ COPY src ./src
 COPY public ./public
 COPY tsconfig.json ./
 
-# 使用 Bun 编译项目
-RUN bun build src/index.ts \
-    --compile \
-    --minify \
-    --sourcemap \
-    --outfile=dist/server
+# 使用 bun run build 编译项目
+RUN bun run build
 
 # ============================================================================
 # 运行阶段
@@ -39,7 +35,7 @@ WORKDIR /app
 RUN mkdir -p /data
 
 # 从构建阶段复制编译后的文件
-COPY --from=builder /app/dist/server ./server
+COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
 
 # 环境变量
@@ -54,5 +50,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/health || exit 1
 
 # 启动编译后的可执行文件
-CMD ["./server"]
+CMD ["./dist/server"]
 
