@@ -1,5 +1,5 @@
 import { pgTable, text, integer, timestamp, serial } from 'drizzle-orm/pg-core';
-import { sqliteTable, integer as sqliteInteger } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer as sqliteInteger, text as sqliteText } from 'drizzle-orm/sqlite-core';
 
 // PostgreSQL Schema
 export const pgServices = pgTable('services', {
@@ -14,8 +14,8 @@ export const pgServices = pgTable('services', {
 // SQLite Schema
 export const sqliteServices = sqliteTable('services', {
   id: sqliteInteger('id').primaryKey({ autoIncrement: true }),
-  domain: text('domain').notNull().unique(),
-  service: text('service').notNull(),
+  domain: sqliteText('domain').notNull().unique(),
+  service: sqliteText('service').notNull(),
   port: sqliteInteger('port').notNull(),
   createdAt: sqliteInteger('created_at').default(() => Date.now()),
   updatedAt: sqliteInteger('updated_at').default(() => Date.now()),

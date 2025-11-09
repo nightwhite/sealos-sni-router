@@ -189,19 +189,22 @@ export class ConfigManager extends EventEmitter {
       try {
         // SQLite 模式：保存到数据库
         for (const service of this.services.values()) {
+          const now = Date.now();
           await this.db
             .insert(schema.sqliteServices)
             .values({
               domain: service.domain,
               service: service.service,
               port: service.port,
+              createdAt: now,
+              updatedAt: now,
             })
             .onConflictDoUpdate({
               target: schema.sqliteServices.domain,
               set: {
                 service: service.service,
                 port: service.port,
-                updatedAt: Date.now(),
+                updatedAt: now,
               },
             });
         }
