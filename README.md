@@ -1,47 +1,95 @@
-# 🚀 Sealos SNI 路由器
+# 🚀 Sealos SNI Router
 
 **为 Sealos/Kubernetes 环境设计的高性能 SNI 路由器 - 用单个 NodePort 支持多个域名！**
 
 ## 📦 项目说明
 
-这是一个纯 Bun 实现的 SNI（Server Name Indication）路由器，专为 Sealos/Kubernetes 环境设计。通过单个 NodePort（如 32271），支持多个域名，每个域名可以路由到不同的后端服务 TCP 端口。
+这是一个基于 Bun + Elysia 实现的 SNI（Server Name Indication）路由器，专为 Sealos/Kubernetes 环境设计。通过单个 NodePort（如 32271），支持多个域名，每个域名可以路由到不同的后端服务 TCP 端口。
 
 ### ✨ 核心特性
 
-- ✅ **单 NodePort 多域名**：用一个 NodePort（如 32271）支持多个域名
+- ✅ **单 NodePort 多域名**：用一个 NodePort 支持多个域名
 - ✅ **纯 Bun 实现**：使用 Bun 原生 TCP Socket，无需 HAProxy
 - ✅ **SNI 路由**：基于 TLS ClientHello 的 SNI 字段进行路由
 - ✅ **Web 管理界面**：实时添加/删除服务，查看统计信息
 - ✅ **通配符支持**：支持 `*.example.com` 通配符域名
+- ✅ **数据持久化**：支持 SQLite 和 PostgreSQL 数据库
 - ✅ **多副本同步**：可选 Redis 支持，实现多副本配置同步
 - ✅ **零停机更新**：配置变更立即生效，无需重启
 - ✅ **高性能**：Bun 原生性能，比 Node.js 快 3-4 倍
+- ✅ **容器化部署**：多阶段 Docker 构建，镜像体积小，启动快
 - ✅ **Sealos 友好**：专为 Sealos/Kubernetes 环境优化
 
 ## 🚀 快速开始
 
-### 开发环境
+### 本地开发
 
 ```bash
+# 1. 克隆项目
+git clone <repository-url>
+cd sealos-sni-router
+
+# 2. 安装依赖
 bun install
+
+# 3. 配置环境变量（可选）
+cp .env.example .env.local
+# 编辑 .env.local 设置端口等配置
+
+# 4. 启动开发服务器（带热重载）
 bun dev
 ```
 
-访问 http://localhost:3000
+访问 http://localhost:3000（默认端口，可在 `.env.local` 中配置 `PORT`）
 
-### 生产环境
+### Docker 部署
+
+#### 方式 1：使用 Docker（SQLite 持久化）
 
 ```bash
-docker build -t bun-sni-router .
-docker run -d -p 3000:3000 -p 9443:9443 bun-sni-router
+# 构建镜像
+docker build -t sealos-sni-router .
+
+# 运行容器（挂载 /data 目录实现持久化）
+docker run -d \
+  -p 3000:3000 \
+  -p 9443:9443 \
+  -v $(pwd)/data:/data \
+  --name sni-router \
+  sealos-sni-router
 ```
 
-## 📚 文档
+#### 方式 2：使用 Docker（PostgreSQL + Redis 高可用）
 
-- **[README_BUN_NATIVE.md](./README_BUN_NATIVE.md)** - 完整功能文档
-- **[GETTING_STARTED.md](./GETTING_STARTED.md)** - 快速上手指南
-- **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** - 快速参考卡片
-- **[FINAL_STATUS.md](./FINAL_STATUS.md)** - 项目完成状态
+```bash
+# 运行容器
+docker run -d \
+  -p 3000:3000 \
+  -p 9443:9443 \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/db \
+  -e REDIS_URL=redis://host:6379 \
+  --name sni-router \
+  sealos-sni-router
+```
+
+#### 方式 3：使用 GitHub Container Registry
+
+```bash
+# 拉取镜像（推送代码后自动构建）
+docker pull ghcr.io/<your-username>/sealos-sni-router:latest
+
+# 运行容器
+docker run -d \
+  -p 3000:3000 \
+  -p 9443:9443 \
+  -v $(pwd)/data:/data \
+  --name sni-router \
+  ghcr.io/<your-username>/sealos-sni-router:latest
+```
+
+### Kubernetes 部署
+
+参见下方 [Kubernetes 部署说明](#-kubernetes-部署说明)
 
 ## 🎯 API 端点
 
@@ -61,20 +109,30 @@ docker run -d -p 3000:3000 -p 9443:9443 bun-sni-router
 │   ├── index.ts              # 入口文件
 │   ├── server.ts             # Elysia Web 服务器
 │   ├── config.ts             # 配置管理
+│   ├── db/                   # 数据库
+│   │   ├── index.ts          # 数据库连接
+│   │   └── schema.ts         # 数据库 Schema
 │   ├── routes/
 │   │   └── services.ts       # API 路由
 │   └── services/
-│       ├── sni-router.ts     # SNI 路由器
+│       ├── sni-router.ts     # SNI 路由器核心
 │       ├── config-manager.ts # 配置管理器
+│       ├── event-bus.ts      # 内存事件总线
+│       ├── memory-store.ts   # 内存存储
 │       └── redis.ts          # Redis 客户端
 ├── public/                    # 前端文件
-│   ├── index.html
-│   ├── app.js
-│   └── style.css
-├── Dockerfile                 # Docker 配置
-├── docker-compose.yml         # Docker Compose
+│   ├── index.html            # Web 管理界面
+│   ├── app.js                # 前端逻辑
+│   └── style.css             # 样式
+├── .github/
+│   └── workflows/
+│       └── docker-build.yml  # GitHub Actions 自动构建
+├── Dockerfile                 # Docker 多阶段构建配置
+├── .gitignore                # Git 忽略文件
+├── .env.example              # 环境变量示例
 ├── package.json              # 依赖配置
-└── 文档...
+├── tsconfig.json             # TypeScript 配置
+└── README.md                 # 项目文档
 ```
 
 ## 🔧 环境变量
@@ -82,8 +140,19 @@ docker run -d -p 3000:3000 -p 9443:9443 bun-sni-router
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `PORT` | `3000` | Web 管理界面端口 |
-| `NODE_ENV` | `development` | 运行环境 |
-| `REDIS_URL` | `null` | Redis 连接 URL（可选） |
+| `NODE_ENV` | `development` | 运行环境（development/production/test） |
+| `DATABASE_URL` | `sqlite:///data/sni-router.db` | 数据库连接 URL（SQLite 或 PostgreSQL） |
+| `REDIS_URL` | `null` | Redis 连接 URL（可选，仅 PostgreSQL 模式需要） |
+
+### 存储模式
+
+项目支持三种存储模式：
+
+1. **sqlite-memory**（默认）：SQLite + 内存，适合单机部署
+2. **sqlite-eventbus**：SQLite + 内存事件总线，适合单机生产环境
+3. **postgresql-redis**：PostgreSQL + Redis，适合 K8s 高可用部署
+
+详见 `.env.example` 文件中的配置说明。
 
 ## 💡 使用示例
 
@@ -131,15 +200,68 @@ curl -X DELETE http://localhost:3000/api/services/smtp.example.com
 
 - **运行时**：Bun 1.x
 - **Web 框架**：Elysia
-- **存储**：内存 / Redis
+- **ORM**：Drizzle ORM
+- **数据库**：SQLite / PostgreSQL
+- **缓存/同步**：Redis（可选）
 - **前端**：原生 HTML/CSS/JS
-- **容器**：Docker
+- **容器**：Docker（多阶段构建）
+- **CI/CD**：GitHub Actions
 
-## 📝 Sealos 部署说明
+## 📝 Kubernetes 部署说明
 
-### 1. **NodePort 配置**
-在 Sealos 中创建 Service，指定 NodePort（如 32271）：
+### 单机模式（SQLite）
+
+适合开发和小规模部署，使用 SQLite 持久化存储。
+
 ```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sni-router-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sni-router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sni-router
+  template:
+    metadata:
+      labels:
+        app: sni-router
+    spec:
+      containers:
+      - name: sni-router
+        image: ghcr.io/<your-username>/sealos-sni-router:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 9443
+          name: sni
+        env:
+        - name: PORT
+          value: "3000"
+        - name: NODE_ENV
+          value: "production"
+        - name: DATABASE_URL
+          value: "sqlite:///data/sni-router.db"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: sni-router-data
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -147,25 +269,102 @@ metadata:
 spec:
   type: NodePort
   ports:
+  - port: 3000
+    targetPort: 3000
+    name: http
   - port: 9443
-    nodePort: 32271
+    targetPort: 9443
+    nodePort: 32271  # 你的 NodePort
     protocol: TCP
+    name: sni
   selector:
     app: sni-router
 ```
 
-### 2. **TLS 处理**
-这是纯 TCP 路由，后端服务需要自己处理 TLS
+### 高可用模式（PostgreSQL + Redis）
 
-### 3. **配置持久化**
-建议使用 Redis 实现持久化，支持多副本同步
+适合生产环境，支持多副本和配置同步。
 
-### 4. **生产部署**
-建议使用 Kubernetes + Redis 实现高可用
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sni-router
+spec:
+  replicas: 3  # 多副本
+  selector:
+    matchLabels:
+      app: sni-router
+  template:
+    metadata:
+      labels:
+        app: sni-router
+    spec:
+      containers:
+      - name: sni-router
+        image: ghcr.io/<your-username>/sealos-sni-router:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 9443
+          name: sni
+        env:
+        - name: PORT
+          value: "3000"
+        - name: NODE_ENV
+          value: "production"
+        - name: DATABASE_URL
+          value: "postgresql://user:password@postgres-service:5432/sni_router"
+        - name: REDIS_URL
+          value: "redis://redis-service:6379"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sni-router
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    targetPort: 3000
+    name: http
+  - port: 9443
+    targetPort: 9443
+    nodePort: 32271  # 你的 NodePort
+    protocol: TCP
+    name: sni
+  selector:
+    app: sni-router
+```
+
+### 部署说明
+
+1. **NodePort 配置**：在 Service 中指定 NodePort（如 32271）
+2. **TLS 处理**：这是纯 TCP 路由，后端服务需要自己处理 TLS
+3. **持久化存储**：
+   - 单机模式：挂载 PVC 到 `/data` 目录
+   - 高可用模式：使用 PostgreSQL + Redis
+4. **镜像获取**：推送代码到 GitHub 后，GitHub Actions 会自动构建镜像
+
+## 🔄 CI/CD
+
+项目包含 GitHub Actions 工作流，自动构建和推送 Docker 镜像到 GitHub Container Registry。
+
+### 触发条件
+
+- 推送到 `main` 或 `master` 分支
+- 创建以 `v` 开头的标签（如 `v1.0.0`）
+- Pull Request
+
+### 镜像标签
+
+- `latest`：最新的 main/master 分支
+- `v1.0.0`：语义化版本标签
+- `main-<sha>`：带 Git SHA 的分支标签
 
 ---
 
-**项目状态**：✅ 完成并通过所有测试
+**项目状态**：✅ 生产就绪
 
 **最后更新**：2025-11-09
 
