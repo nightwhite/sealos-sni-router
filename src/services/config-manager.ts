@@ -3,6 +3,7 @@ import { redis, redisSub } from './redis.ts';
 import { config } from '../config.ts';
 import { getDatabase, getDatabaseType, schema } from '../db/index.ts';
 import { eventBus } from './event-bus.ts';
+import { eq } from 'drizzle-orm';
 
 export interface Service {
   domain: string;
@@ -190,10 +191,18 @@ export class ConfigManager extends EventEmitter {
         for (const service of this.services.values()) {
           await this.db
             .insert(schema.sqliteServices)
-            .values(service)
+            .values({
+              domain: service.domain,
+              service: service.service,
+              port: service.port,
+            })
             .onConflictDoUpdate({
               target: schema.sqliteServices.domain,
-              set: { service: service.service, port: service.port },
+              set: {
+                service: service.service,
+                port: service.port,
+                updatedAt: Date.now(),
+              },
             });
         }
         this.emit('config-changed');
@@ -224,7 +233,25 @@ export class ConfigManager extends EventEmitter {
   // 删除服务
   async deleteService(domain: string) {
     this.services.delete(domain);
-    await this.saveConfig();
+
+    // 从数据库中删除
+    if ((this.storageMode === 'sqlite-memory' || this.storageMode === 'sqlite-eventbus') && this.db) {
+      try {
+        await this.db
+          .delete(schema.sqliteServices)
+          .where(eq(schema.sqliteServices.domain!, domain));
+        console.log(`✅ 服务已从 SQLite 删除: ${domain}`);
+      } catch (error) {
+        console.error('❌ 从 SQLite 删除服务失败:', error);
+      }
+    }
+
+    this.emit('config-changed');
+
+    // sqlite-eventbus 模式：发布事件
+    if (this.storageMode === 'sqlite-eventbus') {
+      eventBus.publish('sni-router:config-changed', Date.now().toString());
+    }
   }
   
   // 获取所有服务
