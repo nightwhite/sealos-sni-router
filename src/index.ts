@@ -25,8 +25,8 @@ process.on("unhandledRejection", (error) => {
 // 初始化数据库
 await initializeDatabase();
 
-// 刷新 ConfigManager 的数据库连接
-configManager.refreshDatabase();
+// 刷新 ConfigManager 的数据库连接并重新加载数据
+await configManager.refreshDatabase();
 
 // 现在才导入 server 和 router
 const { app } = await import("./server.ts");

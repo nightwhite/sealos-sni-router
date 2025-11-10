@@ -28,10 +28,13 @@ export class ConfigManager extends EventEmitter {
   }
 
   // 刷新数据库连接（在数据库初始化后调用）
-  refreshDatabase() {
+  async refreshDatabase() {
     this.db = getDatabase();
     this.storageMode = this.detectStorageMode();
     console.log(`🔄 ConfigManager 数据库连接已刷新 (模式: ${this.storageMode})`);
+
+    // 重新加载数据
+    await this.init();
   }
 
   private detectStorageMode(): StorageMode {
