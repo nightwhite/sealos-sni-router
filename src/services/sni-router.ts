@@ -120,29 +120,44 @@ async function handleClientConnection(socket: any, data: Buffer) {
     configManager.recordConnection(sni);
 
     // 连接到后端
-    const backendSocket = await Bun.connect({
-      hostname: resolvedService,
-      port: backend.port,
-      socket: {
-        data(_backendSocket: any, backendData: Buffer) {
-          // 后端 → 客户端
-          socket.write(backendData);
+    console.log(`🔌 正在连接后端: ${resolvedService}:${backend.port}`);
+
+    let backendSocket;
+    try {
+      backendSocket = await Bun.connect({
+        hostname: resolvedService,
+        port: backend.port,
+        socket: {
+          data(_backendSocket: any, backendData: Buffer) {
+            // 后端 → 客户端
+            console.log(`📤 后端 → 客户端: ${backendData.length} bytes`);
+            socket.write(backendData);
+          },
+          open(_backendSocket: any) {
+            console.log(`✅ 后端连接成功: ${resolvedService}:${backend.port}`);
+          },
+          close(_backendSocket: any) {
+            console.log(`🔌 后端连接关闭: ${resolvedService}:${backend.port}`);
+            socket.end();
+          },
+          error(_backendSocket: any, error: Error) {
+            console.error(`❌ 后端连接错误 (${backend.service}:${backend.port}):`, error);
+            socket.end();
+          },
         },
-        close(_backendSocket: any) {
-          socket.end();
-        },
-        error(_backendSocket: any, error: Error) {
-          console.error(`❌ 后端连接错误 (${backend.service}:${backend.port}):`, error);
-          socket.end();
-        },
-      },
-    });
+      });
+    } catch (error) {
+      console.error(`❌ 无法连接到后端 ${resolvedService}:${backend.port}:`, error);
+      socket.end();
+      return;
+    }
 
     // 标记已处理 SNI，保存后端 socket 引用
     (socket as any)._sniProcessed = true;
     (socket as any)._backendSocket = backendSocket;
 
     // 发送初始数据到后端
+    console.log(`📥 客户端 → 后端: ${data.length} bytes (ClientHello)`);
     backendSocket.write(data);
 
     // 后续数据转发
