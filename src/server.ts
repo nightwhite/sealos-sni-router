@@ -8,7 +8,7 @@ import { servicesRouter } from "./routes/services.ts"
 export const app = new Elysia()
   .use(
     logger({
-      level: config.NODE_ENV === "production" ? "error" : "info",
+      level: "info",  // 始终使用 info 级别，便于调试
     })
   )
   .use(html())
