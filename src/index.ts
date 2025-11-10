@@ -1,6 +1,7 @@
 import { config } from "./config.ts"
 import { initializeDatabase } from "./db/index.ts"
 import { configManager } from "./services/config-manager.ts"
+import { getCurrentNamespace } from "./utils/k8s.ts"
 
 const signals = ["SIGINT", "SIGTERM"];
 
