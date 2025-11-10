@@ -1,4 +1,5 @@
 import { configManager } from './config-manager.ts';
+import { resolveServiceName } from '../utils/k8s.ts';
 
 // 从 TLS ClientHello 提取 SNI
 function extractSNI(buffer: Buffer): string | null {
@@ -107,14 +108,20 @@ async function handleClientConnection(socket: any, data: Buffer) {
       return;
     }
 
+    // 解析服务名（自动补全 namespace）
+    const resolvedService = resolveServiceName(backend.service);
+
     console.log(`✅ 路由到: ${backend.service}:${backend.port}`);
+    if (resolvedService !== backend.service) {
+      console.log(`   解析为: ${resolvedService}`);
+    }
 
     // 记录统计
     configManager.recordConnection(sni);
 
     // 连接到后端
     const backendSocket = await Bun.connect({
-      hostname: backend.service,
+      hostname: resolvedService,
       port: backend.port,
       socket: {
         data(_backendSocket: any, backendData: Buffer) {
