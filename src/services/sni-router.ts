@@ -3,6 +3,9 @@ import { resolveServiceName } from '../utils/k8s.ts';
 import { certManager } from '../utils/cert-manager.ts';
 import tls from 'tls';
 
+// 日志级别控制
+const VERBOSE_LOGGING = process.env.SNI_VERBOSE === 'true';
+
 // 从 TLS ClientHello 提取 SNI（已废弃，TLS 终止模式不再需要）
 /*
 function extractSNI(buffer: Buffer): string | null {
@@ -187,12 +190,10 @@ async function handleTLSConnection(tlsSocket: any) {
     const sni = tlsSocket.servername as string;
 
     if (!sni) {
-      console.log('⚠️ 无法获取 SNI，关闭连接');
+      if (VERBOSE_LOGGING) console.log('⚠️ 无法获取 SNI，关闭连接');
       tlsSocket.end();
       return;
     }
-
-    console.log(`📨 收到 TLS 连接: ${sni}`);
 
     // 查找后端
     const backend = configManager.findBackend(sni);
@@ -206,35 +207,31 @@ async function handleTLSConnection(tlsSocket: any) {
     // 解析服务名（自动补全 namespace）
     const resolvedService = resolveServiceName(backend.service);
 
-    console.log(`✅ 路由到: ${backend.service}:${backend.port}`);
-    if (resolvedService !== backend.service) {
-      console.log(`   解析为: ${resolvedService}`);
-    }
+    // 只在首次连接时记录日志
+    console.log(`📨 ${sni} → ${backend.service}:${backend.port}`);
 
     // 记录统计
     configManager.recordConnection(sni);
 
     // 连接到后端（明文）
-    console.log(`🔌 正在连接后端: ${resolvedService}:${backend.port}`);
-
     const backendSocket = await Bun.connect({
       hostname: resolvedService,
       port: backend.port,
       socket: {
         data(_backendSocket: any, backendData: Buffer) {
           // 后端 → 客户端（TLS 加密）
-          console.log(`📤 后端 → 客户端: ${backendData.length} bytes`);
+          if (VERBOSE_LOGGING) console.log(`📤 后端 → 客户端: ${backendData.length} bytes`);
           tlsSocket.write(backendData);
         },
         open(_backendSocket: any) {
-          console.log(`✅ 后端连接成功: ${resolvedService}:${backend.port}`);
+          if (VERBOSE_LOGGING) console.log(`✅ 后端连接成功: ${resolvedService}:${backend.port}`);
         },
         close(_backendSocket: any) {
-          console.log(`🔌 后端连接关闭: ${resolvedService}:${backend.port}`);
+          if (VERBOSE_LOGGING) console.log(`🔌 后端连接关闭: ${resolvedService}:${backend.port}`);
           tlsSocket.end();
         },
         error(_backendSocket: any, error: Error) {
-          console.error(`❌ 后端连接错误 (${backend.service}:${backend.port}):`, error);
+          console.error(`❌ 后端错误 (${sni}):`, error.message);
           tlsSocket.end();
         },
       },
@@ -242,22 +239,22 @@ async function handleTLSConnection(tlsSocket: any) {
 
     // 客户端 → 后端（明文）
     tlsSocket.on('data', (data: Buffer) => {
-      console.log(`📥 客户端 → 后端: ${data.length} bytes`);
+      if (VERBOSE_LOGGING) console.log(`📥 客户端 → 后端: ${data.length} bytes`);
       backendSocket.write(data);
     });
 
     tlsSocket.on('end', () => {
-      console.log(`🔌 客户端连接关闭: ${sni}`);
+      if (VERBOSE_LOGGING) console.log(`🔌 客户端断开: ${sni}`);
       backendSocket.end();
     });
 
     tlsSocket.on('error', (error: Error) => {
-      console.error(`❌ 客户端连接错误 (${sni}):`, error);
+      console.error(`❌ 客户端错误 (${sni}):`, error.message);
       backendSocket.end();
     });
 
-  } catch (error) {
-    console.error('❌ 处理 TLS 连接失败:', error);
+  } catch (error: any) {
+    console.error(`❌ 连接失败 (${tlsSocket.servername}):`, error.message);
     tlsSocket.end();
   }
 }

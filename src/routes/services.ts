@@ -6,9 +6,7 @@ export const servicesRouter = new Elysia({ prefix: '/api' })
 
   // 获取所有服务
   .get('/services', () => {
-    console.log('Fetching all services');
     const services = configManager.getServices();
-    console.log(`Found ${services.length} services`);
     return { services };
   })
 
@@ -52,11 +50,8 @@ export const servicesRouter = new Elysia({ prefix: '/api' })
     const { domain } = params;
     const decodedDomain = decodeURIComponent(domain);
 
-    console.log(`Deleting service: ${decodedDomain}`);
-
     await configManager.deleteService(decodedDomain);
-
-    console.log(`Service deleted successfully: ${decodedDomain}`);
+    console.log(`🗑️  已删除服务: ${decodedDomain}`);
 
     return {
       success: true,
@@ -68,7 +63,6 @@ export const servicesRouter = new Elysia({ prefix: '/api' })
 
   // 获取统计信息
   .get('/services/stats', () => {
-    console.log('Fetching statistics');
     const stats = configManager.getStats();
     return stats;
   });

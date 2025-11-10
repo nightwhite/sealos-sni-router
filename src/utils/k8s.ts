@@ -1,12 +1,20 @@
 import { readFileSync } from 'fs';
 
+// 缓存 namespace，避免重复读取文件
+let cachedNamespace: string | null | undefined = undefined;
+
 /**
  * 获取当前 Pod 所在的 namespace
  */
 export function getCurrentNamespace(): string | null {
+  // 如果已经缓存，直接返回
+  if (cachedNamespace !== undefined) {
+    return cachedNamespace;
+  }
   try {
     // 方法 1: 从 ServiceAccount 文件读取（标准方式）
     const namespace = readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/namespace', 'utf-8').trim();
+    cachedNamespace = namespace;
     return namespace;
   } catch (error) {
     // 方法 2: 从 /etc/resolv.conf 的 search domain 推断
@@ -19,7 +27,8 @@ export function getCurrentNamespace(): string | null {
         const firstDomain = searchLine.split(/\s+/)[1];
         if (firstDomain && firstDomain.endsWith('.svc.cluster.local')) {
           const namespace = firstDomain.replace('.svc.cluster.local', '');
-          console.log(`📍 从 /etc/resolv.conf 检测到 namespace: ${namespace}`);
+          console.log(`📍 检测到 namespace: ${namespace}`);
+          cachedNamespace = namespace;
           return namespace;
         }
       }
@@ -27,7 +36,7 @@ export function getCurrentNamespace(): string | null {
       // 忽略
     }
 
-    console.warn('⚠️ 无法读取 Kubernetes namespace，可能不在 K8s 环境中');
+    cachedNamespace = null;
     return null;
   }
 }
