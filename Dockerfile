@@ -32,12 +32,13 @@ FROM oven/bun:1-alpine
 # 安装必要工具
 RUN apk add --no-cache \
     curl \
-    bash
+    bash \
+    openssl
 
 WORKDIR /app
 
-# 创建数据目录（用于 SQLite 持久化）
-RUN mkdir -p /data
+# 创建数据目录（用于 SQLite 持久化和 TLS 证书）
+RUN mkdir -p /data /data/certs
 
 # 从构建阶段复制编译后的可执行文件
 COPY --from=builder /app/server ./server
